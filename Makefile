@@ -1,4 +1,4 @@
-OBJS = shell.o syscall.o
+OBJS = shell.o syscall.o strings.o
 
 shell: $(OBJS)
 	gcc -g -nostdlib -o shell $(OBJS)

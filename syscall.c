@@ -31,20 +31,18 @@
             : "memory");                   \
         retval;                            \
     })
-void
-sys_exit(int status)
+
+void sys_exit(int status)
 {
     syscall1(SYSEXIT, status);
 }
 
-int
-sys_write(unsigned int fd, const char *buf, unsigned count)
+int sys_write(unsigned int fd, const char *buf, unsigned count)
 {
     return syscall3(SYSWRITE, fd, buf, count);
 }
 
-int 
-sys_read(unsigned int fd, char *buf, unsigned count)
+int sys_read(unsigned int fd, char *buf, unsigned count)
 {
     return syscall3(SYSREAD, fd, buf, count);
 }
