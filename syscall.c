@@ -1,5 +1,17 @@
 #include "syscall.h"
 
+#define syscall0(NUMBER)     \
+    ({                       \
+        int retval;          \
+        asm volatile(        \
+            "mov %1, %%rax;" \
+            "syscall"        \
+            : "=a"(retval)   \
+            : "i"(NUMBER)    \
+            : "memory");     \
+        retval;              \
+    })
+
 #define syscall1(NUMBER, ARG0) \
     ({                         \
         int retval;            \
@@ -32,11 +44,6 @@
         retval;                            \
     })
 
-void sys_exit(int status)
-{
-    syscall1(SYSEXIT, status);
-}
-
 int sys_write(unsigned int fd, const char *buf, unsigned count)
 {
     return syscall3(SYSWRITE, fd, buf, count);
@@ -45,4 +52,19 @@ int sys_write(unsigned int fd, const char *buf, unsigned count)
 int sys_read(unsigned int fd, char *buf, unsigned count)
 {
     return syscall3(SYSREAD, fd, buf, count);
+}
+
+int sys_fork()
+{
+    return syscall0(SYSFORK);
+}
+
+int sys_execve(const char *filename, const char *const argv[], const char *const envp[])
+{
+    return syscall3(SYSEXECVE, filename, argv, envp);
+}
+
+void sys_exit(int status)
+{
+    syscall1(SYSEXIT, status);
 }
