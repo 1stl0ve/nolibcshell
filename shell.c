@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include "unistd.h"
 #include "strings.h"
 #include "syscall.h"
 
@@ -7,9 +9,8 @@
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2
-#define NULL 0
 
-int main(int argc, char *Argv[], char *envp[]);
+int main(int argc, char *argv[], char *envp[]);
 
 int read_line(char *buff, unsigned length)
 {
@@ -28,12 +29,12 @@ int parse_args(char *argv[], char *args)
 {
     int i = 0;
 
-    if (args[string_length(args) - 1] != '\n')
+    if (args[strlen(args) - 1] != '\n')
     {
         return -1;
     }
 
-    args[string_length(args) - 1] = '\0';
+    args[strlen(args) - 1] = '\0';
 
     argv[0] = args;
 
@@ -50,66 +51,95 @@ void print_prompt(void)
     sys_write(STDERR, "$ ", 2);
 }
 
-char *getfilename(char *filename, char *envp[])
+char *search_path(char *cmd, char *env_path)
 {
+    char *paths[MAX_BUFF_LEN];
+    char *path = NULL;
+    int path_len = 0;
+    int i = 0;
+    int status = 0;
+
+    /*
+     * Create an array containing each of the potential path elements by tokenizing
+     * env_path on ':'
+     */
+    paths[0] = env_path;
+    for (i = 0; i + 1 < MAX_BUFF_LEN && paths[i]; i++)
+    {
+        paths[i + 1] = string_tok(paths[i], ':');
+    }
+
+    for (i = 0; i + 1 < MAX_BUFF_LEN && paths[i]; i++)
+    {
+        path_len = strlen(paths[i]) + 1 + strlen(cmd) + 1; /* +2 for '/' and null byte. */
+        path = malloc(path_len * sizeof(char));
+        if (!path)
+        {
+            return NULL;
+        }
+        memset(path, 0, path_len);
+
+        /* 
+         * construct the binary path: path + / + cmd 
+         */
+        memcpy(path, paths[i], strlen(paths[i]));
+        memcpy(path + strlen(paths[i]), "/", 1);
+        memcpy(path + strlen(paths[i]) + 1, cmd, strlen(cmd));
+
+        /*
+         * check to see if that binary exists and is executable.
+         */
+        status = access(path, X_OK);
+        if (0 == status)
+        {
+            return path;
+        }
+
+        /* 
+         * no good. 
+         */
+        free(path);
+    }
+    return NULL;
+}
+
+char *get_command_path(char *cmd, char *envp[])
+{
+    char path_str[MAX_BUFF_LEN] = {0};
+    char *path = NULL;
     int i = 0;
 
-    if (filename[0] == '/')
+    /*
+     * if the command starts with a '/', assume its an absolute path.
+     * return NULL to tell the calling function to use what it already has.
+     */
+    if (cmd[0] == '/')
     {
         return NULL;
     }
 
+    /* 
+     * search the environment for PATH.
+     */
     for (i = 0; envp[i]; i++)
     {
-        if (0 == string_cmp("PATH=", envp[i], 5))
+        if (0 == strncmp("PATH=", envp[i], 5))
         {
             break;
         }
     }
 
-    char paths_str[MAX_BUFF_LEN] = {0};
-    int j = 0;
-    for (j = 0; j < string_length(envp[i]); j++)
+    /*
+     * copy the PATH variable (starting after '=') to path_str.
+     */
+    if (envp)
     {
-        paths_str[j] = envp[i][j];
+        path = envp[i] + 5;
+        strncpy(path_str, path, strlen(path));
     }
 
-    char *paths[MAX_BUFF_LEN];
-    paths[0] = paths_str + 5;
-    for (j = 0; j + 1 < MAX_BUFF_LEN && paths[j]; j++)
-    {
-        paths[j + 1] = string_tok(paths[j], ':');
-    }
+    return search_path(cmd, path_str);
 
-    for (i = 0; i < j; i++)
-    {
-        char tmppath[MAX_BUFF_LEN] = {0};
-        int k = 0;
-        for (k = 0; k < string_length(paths[i]); k++)
-        {
-            tmppath[k] = paths[i][k];
-        }
-        tmppath[k] = '/';
-        int l = 0;
-        for (l = 0; l < string_length(filename); l++)
-        {
-            tmppath[k + 1 + l] = filename[l];
-        }
-        int n = sys_access(tmppath, 1);
-        if (0 == n)
-        {
-            unsigned long ret = sys_brk(0);
-            ret = sys_brk(ret + string_length(tmppath) + 1);
-            int x = 0;
-            for (x = 0; x < string_length(tmppath); x++)
-            {
-                ((char *)ret)[x] = tmppath[x];
-            }
-            return ret;
-        }
-    }
-
-    return NULL;
 }
 
 int main(int argc, char *argv[], char *envp[])
@@ -120,43 +150,48 @@ int main(int argc, char *argv[], char *envp[])
 
     while (TRUE)
     {
-        sys_write(STDERR, PROMPT, string_length(PROMPT));
+        sys_write(STDERR, PROMPT, strlen(PROMPT));
         n = read_line(buff, MAX_BUFF_LEN);
-        sys_write(STDIN, "[DEBUG] executing: ", string_length("[DEBUG] executing: "));
+        sys_write(STDIN, "[DEBUG] executing: ", strlen("[DEBUG] executing: "));
         sys_write(STDIN, buff, n);
 
         n = parse_args(argv2, buff);
 
-        if (0 == string_cmp(argv2[0], "exit", 4))
+        if (0 == strncmp(argv2[0], "exit", 4))
         {
             break;
         }
 
+        char *filename = get_command_path(argv2[0], envp);
+        if (filename)
+        {
+            argv2[0] = filename;
+        }
         int child = sys_fork();
 
         if (-1 == child)
         {
-            sys_exit(1);
+            exit(1);
         }
         else if (0 == child)
         {
-            char *filename = getfilename(argv2[0], envp);
-            if (filename)
+
+            if (-1 == sys_execve(argv2[0], (const char *const *)argv2, NULL))
             {
-                argv2[0] = filename;
-            }
-            if (-1 == sys_execve(argv2[0], argv2, NULL))
-            {
-                sys_write(STDERR, "execve failed\n", string_length("execve failed\n"));
+                sys_write(STDERR, "execve failed\n", strlen("execve failed\n"));
             }
             if (filename)
             {
-                //sys_munmap(filename, 2048);
+                free(filename);
             }
-            sys_exit(0);
+            exit(0);
         }
 
-        zero_string(buff, MAX_BUFF_LEN);
+        if (filename)
+        {
+            free(filename);
+        }
+        memset(buff, 0, MAX_BUFF_LEN);
     }
     return 0;
 }
