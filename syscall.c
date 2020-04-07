@@ -94,6 +94,7 @@ int sys_write(unsigned int fd, const char *buf, unsigned count)
     return syscall3(SYSWRITE, fd, buf, count);
 }
 
+#if 0
 char *sys_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags, unsigned long fd, unsigned long off)
 {
     return (char *) syscall6(SYSMMAP, addr, len, prot, flags, fd, off);
@@ -103,6 +104,7 @@ int sys_munmap(unsigned long addr, unsigned long len)
 {
     return syscall2(SYSMUNMAP, addr, len);
 }
+#endif
 
 unsigned long sys_brk(unsigned long brk)
 {
