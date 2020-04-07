@@ -38,3 +38,17 @@ int string_length(char *str)
     }
     return i;
 }
+
+char *string_tok(char *str, char del)
+{
+    int i = 0;
+    for (i = 0; str[i] != del && str[i] != '\0'; i++) {}
+
+    if (str[i] == '\0')
+    {
+        return 0;
+    }
+
+    str[i++] = '\0';
+    return str + i;
+}
