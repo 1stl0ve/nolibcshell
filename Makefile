@@ -1,11 +1,17 @@
-OBJS = shell.o syscall.o strings.o 
+LIBC_CFLAGS ?= -g -Wall
+CFLAGS ?= -g -Wall -nostdlib -nodefaultlibs -nostartfiles
+ENTRY ?= entry.S
+OBJS = shell.o syscall.o strings.o stdlib.o unistd.o
 
 shell: $(OBJS)
-	gcc -g -nostdlib -nodefaultlibs -nostartfiles -o shell $(OBJS) entry.S
+	gcc $(CFLAGS) -o shell $(OBJS) $(ENTRY)
 	$(MAKE) clean-objs
 
+libc:
+	$(MAKE) CFLAGS="$(LIBC_FLAGS)" ENTRY="" shell
+
 %.o: %.c
-	gcc -g -nostdlib -nodefaultlibs -nostartfiles -c $< -o $@
+	gcc $(CFLAGS) -c $< -o $@
 
 .PHONY: clean clean-objs
 
