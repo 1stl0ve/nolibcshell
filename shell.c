@@ -38,7 +38,7 @@ int parse_args(char *argv[], char *args)
 
     for (i = 0; i + 1 < 1024 && argv[i]; i++)
     {
-        argv[i + 1] = string_tok(argv[i], ' ');
+        argv[i + 1] = strtok(argv[i], ' ');
     }
 
     return i;
@@ -60,7 +60,7 @@ char *search_path(char *cmd, char *env_path)
     paths[0] = env_path;
     for (i = 0; i + 1 < MAX_BUFF_LEN && paths[i]; i++)
     {
-        paths[i + 1] = string_tok(paths[i], ':');
+        paths[i + 1] = strtok(paths[i], ':');
     }
 
     for (i = 0; i + 1 < MAX_BUFF_LEN && paths[i]; i++)
@@ -76,9 +76,9 @@ char *search_path(char *cmd, char *env_path)
         /* 
          * construct the binary path: path + / + cmd 
          */
-        memcpy(path, paths[i], strlen(paths[i]));
-        memcpy(path + strlen(paths[i]), "/", 1);
-        memcpy(path + strlen(paths[i]) + 1, cmd, strlen(cmd));
+        strncpy(path, paths[i], strlen(paths[i]));
+        strncpy(path + strlen(paths[i]), "/", 1);
+        strncpy(path + strlen(paths[i]) + 1, cmd, strlen(cmd));
 
         /*
          * check to see if that binary exists and is executable.
@@ -133,28 +133,42 @@ char *get_command_path(char *cmd, char *envp[])
     }
 
     return search_path(cmd, path_str);
-
 }
 
 int main(int argc, char *argv[], char *envp[])
 {
     char buff[MAX_BUFF_LEN] = {0};
-    int n = 0;
     char *argv2[1024] = {0};
     char *prompt = "$ ";
+    int status = 0;
+    int n = 0;
+    int background = 0;
 
     while (TRUE)
     {
+        background = 0;
+        memset(buff, 0, MAX_BUFF_LEN);
         printstr(STDERR, prompt);
-        n = read_line(buff, MAX_BUFF_LEN);
+        read_line(buff, MAX_BUFF_LEN);
         printstr(STDIN, "[DEBUG] executing: ");
         printstr(STDIN, buff);
 
         n = parse_args(argv2, buff);
 
+        if (0 == strncmp(argv2[0], "", 1))
+        {
+            continue;
+        }
+
         if (0 == strncmp(argv2[0], "exit", 4))
         {
             break;
+        }
+
+        if (0 == strncmp("&", argv2[n -1], 1))
+        {
+            background = 1;
+            argv2[n -1] = NULL;
         }
 
         char *filename = get_command_path(argv2[0], envp);
@@ -162,7 +176,7 @@ int main(int argc, char *argv[], char *envp[])
         {
             argv2[0] = filename;
         }
-        int child = sys_fork();
+        int child = fork();
 
         if (-1 == child)
         {
@@ -170,10 +184,9 @@ int main(int argc, char *argv[], char *envp[])
         }
         else if (0 == child)
         {
-
-            if (-1 == sys_execve(argv2[0], (const char *const *)argv2, NULL))
+            if (-1 == execve(argv2[0], (const char *const *)argv2, envp))
             {
-                sys_write(STDERR, "execve failed\n", strlen("execve failed\n"));
+                printstr(STDERR, "execve failed\n");
             }
             if (filename)
             {
@@ -183,9 +196,25 @@ int main(int argc, char *argv[], char *envp[])
         }
         else
         {
-            //wait(NULL);
+            printstr(STDOUT, "checking: ");
+            printstr(STDOUT, argv2[n-1]);
+            printstr(STDOUT, "\n");
+            //if (0 == strncmp("&", argv2[n - 1], 1))
+            if (background)
+            {
+                continue;
+            }
+            if (-1 == waitpid(child, &status, __WALL))
+            {
+                printstr(STDERR, "error: waitpid\n");
+                exit(1);
+            }
+            else if ((status) & 0x7f)
+            {
+                printstr(STDERR, "child exited\n");
+            }
         }
-        
+
         if (filename)
         {
             free(filename);
