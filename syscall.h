@@ -10,12 +10,13 @@
 #define SYSFORK 57
 #define SYSEXECVE 59
 #define SYSEXIT 60
+#define SYSWAIT4 61
 
 #define syscall0(NUMBER)     \
     ({                       \
         int retval;          \
         asm volatile(        \
-            "mov %1, %%rax;" \
+            "movq %1, %%rax;" \
             "syscall"        \
             : "=a"(retval)   \
             : "i"(NUMBER)    \
@@ -41,9 +42,9 @@
     ({                               \
         long retval;                  \
         asm volatile(                \
-            "mov %1, %%rax;"         \
-            "mov %2, %%rdi;"         \
-            "mov %3, %%rsi;"         \
+            "movq %1, %%rax;"         \
+            "movq %2, %%rdi;"         \
+            "movq %3, %%rsi;"         \
             "syscall"                \
             : "=a"(retval)           \
             : "i"(NUMBER),           \
@@ -71,42 +72,24 @@
         retval;                            \
     })
 
-#define syscall6(NUMBER, ARG0, ARG1, ARG2, ARG3, ARG4, ARG5) \
-    ({                                                       \
-        int retval;                                          \
-        asm volatile(                                        \
-            "movq %1, %%rax;"                                \
-            "movq %2, %%rdi;"                                \
-            "movq %3, %%rsi;"                                \
-            "movl %4, %%edx;"                                \
-            "movq %5, %%r10;"                                \
-            "movq %6, %%r8;"                                 \
-            "movq %7, %%r9;"                                 \
-            "syscall"                                        \
-            : "=a"(retval)                                   \
-            : "i"(NUMBER),                                   \
-              "g"(ARG0),                                     \
-              "g"(ARG1),                                     \
-              "g"(ARG2),                                     \
-              "g"(ARG3),                                     \
-              "g"(ARG4),                                     \
-              "g"(ARG5)                                      \
-            : "memory");                                     \
-        retval;                                              \
+#define syscall4(NUMBER, ARG0, ARG1, ARG2, ARG3) \
+    ({                                           \
+        long retval;                             \
+        asm volatile(                            \
+            "movq %1, %%rax;"                    \
+            "movq %2, %%rdi;"                    \
+            "movq %3, %%rsi;"                    \
+            "movq %4, %%rdx;"                    \
+            "movq %5, %%r10;"                    \
+            "syscall"                            \
+            : "=a"(retval)                       \
+            : "i"(NUMBER),                       \
+              "g"(ARG0),                         \
+              "g"(ARG1),                         \
+              "g"(ARG2),                         \
+              "g"(ARG3)                          \
+            : "memory");                         \
+        retval;                                  \
     })
-
-
-#if 0
-int sys_read(unsigned int fd, char *buf, unsigned count);
-//int sys_write(unsigned int fd, const char *buf, unsigned int count);
-int sys_write(unsigned long fd, const char *buf, unsigned long count);
-char *sys_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags, unsigned long fd, unsigned long off);
-int sys_munmap(unsigned long addr, unsigned long len);
-unsigned long sys_brk(unsigned long brk);
-int sys_access(const char *filename, int mode);
-int sys_fork(void);
-int sys_execve(const char *filename, const char *const argv[], const char *const envp[]);
-void sys_exit(int status) __attribute__((noreturn));
-#endif
 
 #endif
