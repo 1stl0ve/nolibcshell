@@ -11,6 +11,9 @@ shell: $(OBJS)
 
 .PHONY: clean clean-objs
 
+unity: unity.c
+	gcc $(CFLAGS) unity.c entry.S -o shell.unity
+
 clean-objs:
 	rm -f $(OBJS)
 
