@@ -37,11 +37,14 @@ block_meta_t *request_space(block_meta_t *last, size_t size)
     block_meta_t *block = NULL;
     void *request = NULL;
 
-    block = (block_meta_t *)sys_brk(0);
-    request = (void *)sys_brk((unsigned long) block + size + META_SIZE);
+    //block = (block_meta_t *)sys_brk(0);
+    block = (block_meta_t *) (unsigned long) syscall1(SYSBRK, 0);
+    //request = (void *)sys_brk((unsigned long) block + size + META_SIZE);
+    unsigned long request_size = (unsigned long) size + (unsigned long) META_SIZE + (unsigned long)block;
+    //request = (void *)(unsigned long) syscall1(SYSBRK, (unsigned long) block + size + META_SIZE);
+    request = (void *)(unsigned long) syscall1(SYSBRK, request_size);
     if (request == (void *)-1)
     {
-        sys_write(2, "BBB\n", 4);
         return NULL;
     }
 
@@ -123,6 +126,6 @@ void free(void *ptr)
 
 void exit(int status)
 {
-    sys_exit(status);
+    syscall1(SYSEXIT, status);
     /* does not return. */
 }

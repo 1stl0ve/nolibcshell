@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "strings.h"
+#include "syscall.h"
 
 void zero_string(char *str, unsigned length)
 {
@@ -97,4 +98,10 @@ void *memset(void *s, int c, size_t n)
     }
 
     return (void *)ptr;
+}
+
+void printstr(int fd, char *str)
+{
+    unsigned long len = strlen(str);
+    syscall3(SYSWRITE, fd, str, len);
 }

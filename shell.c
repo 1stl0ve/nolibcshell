@@ -1,10 +1,8 @@
-#include <stdlib.h>
-#include "unistd.h"
+#include "mylib.h"
+#include "heap.h"
 #include "strings.h"
-#include "syscall.h"
 
 #define TRUE 1
-#define PROMPT "$ "
 #define MAX_BUFF_LEN 2048
 #define STDIN 0
 #define STDOUT 1
@@ -18,7 +16,7 @@ int read_line(char *buff, unsigned length)
     char c = '\0';
     do
     {
-        sys_read(0, &c, 1);
+        read(0, &c, 1);
         buff[i++] = c;
     } while (c != '\n' && i < length);
 
@@ -46,11 +44,7 @@ int parse_args(char *argv[], char *args)
     return i;
 }
 
-void print_prompt(void)
-{
-    sys_write(STDERR, "$ ", 2);
-}
-
+/* https://stackoverflow.com/questions/147057/ */
 char *search_path(char *cmd, char *env_path)
 {
     char *paths[MAX_BUFF_LEN];
@@ -147,13 +141,14 @@ int main(int argc, char *argv[], char *envp[])
     char buff[MAX_BUFF_LEN] = {0};
     int n = 0;
     char *argv2[1024] = {0};
+    char *prompt = "$ ";
 
     while (TRUE)
     {
-        sys_write(STDERR, PROMPT, strlen(PROMPT));
+        printstr(STDERR, prompt);
         n = read_line(buff, MAX_BUFF_LEN);
-        sys_write(STDIN, "[DEBUG] executing: ", strlen("[DEBUG] executing: "));
-        sys_write(STDIN, buff, n);
+        printstr(STDIN, "[DEBUG] executing: ");
+        printstr(STDIN, buff);
 
         n = parse_args(argv2, buff);
 
@@ -186,7 +181,11 @@ int main(int argc, char *argv[], char *envp[])
             }
             exit(0);
         }
-
+        else
+        {
+            //wait(NULL);
+        }
+        
         if (filename)
         {
             free(filename);
