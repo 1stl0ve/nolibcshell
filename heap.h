@@ -1,12 +1,14 @@
 #ifndef __STDLIB_H
 #define __STDLIB_H
 
-#define NULL 0
-
-typedef unsigned long long size_t;
-
+/**
+ * @brief dynamically allocates a specified number of bytes on the heap.
+ */ 
 void *malloc(size_t size);
+ 
+/**
+ * @brief marks a block as free for future use.
+ */
 void free(void *ptr);
-void exit(int status);
 
 #endif
