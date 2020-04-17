@@ -24,6 +24,14 @@ typedef long long ssize_t;
  */
 #define __WALL 0x40000000
 
+#define assert(expression) \
+    ({                     \
+        if (!(expression)) \
+        {                  \
+            exit(1);       \
+        }                  \
+    })
+
 /**
  * @brief wrapper function for access syscall.
  */
