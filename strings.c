@@ -7,11 +7,7 @@
  */
 #include "mylib.h"
 #include "strings.h"
-#ifdef ARCH32
-#include "syscall_x86.h"
-#else
 #include "syscall.h"
-#endif
 
 /**
  * strncmp:

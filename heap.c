@@ -4,11 +4,7 @@
  * Provides SUPER simple "memory management" functions.
  */
 #include "mylib.h"
-#ifdef ARCH32
-#include "syscall_x86.h"
-#else
 #include "syscall.h"
-#endif
 
 /**
  * This code is base on the tutorial found at: danlulu.com/malloc-tutorial.

@@ -2,11 +2,7 @@
  * A series of wrapper functions for syscalls needed by the shell.
  */
 #include "mylib.h"
-#ifdef ARCH32
-#include "syscall_x86.h"
-#else
 #include "syscall.h"
-#endif
 
 /**
  * access:
