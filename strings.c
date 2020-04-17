@@ -7,7 +7,11 @@
  */
 #include "mylib.h"
 #include "strings.h"
+#ifdef ARCH32
+#include "syscall_x86.h"
+#else
 #include "syscall.h"
+#endif
 
 /**
  * strncmp:
@@ -154,6 +158,6 @@ void *memset(void *s, int c, size_t n)
  */
 void printstr(int fd, char *str)
 {
-    unsigned long len = strlen(str);
+    size_t len = strlen(str);
     syscall3(SYSWRITE, fd, str, len);
 }

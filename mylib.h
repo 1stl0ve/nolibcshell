@@ -3,8 +3,13 @@
 
 #define NULL 0
 
+#ifdef ARCH32
+typedef unsigned int size_t;
+typedef int ssize_t;
+#else
 typedef unsigned long long size_t;
 typedef long long ssize_t;
+#endif
 
 /**
  * constants for access modes.

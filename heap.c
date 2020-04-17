@@ -4,7 +4,11 @@
  * Provides SUPER simple "memory management" functions.
  */
 #include "mylib.h"
+#ifdef ARCH32
+#include "syscall_x86.h"
+#else
 #include "syscall.h"
+#endif
 
 /**
  * This code is base on the tutorial found at: danlulu.com/malloc-tutorial.
@@ -62,11 +66,11 @@ static block_meta_t *request_space(block_meta_t *last, size_t size)
 {
     block_meta_t *block = NULL;
     void *request = NULL;
-    unsigned long request_size = 0;
+    size_t request_size = 0;
 
-    block = (block_meta_t *)(unsigned long)syscall1(SYSBRK, 0);
-    request_size = (unsigned long)size + (unsigned long)META_SIZE + (unsigned long)block;
-    request = (void *)(unsigned long)syscall1(SYSBRK, request_size);
+    block = (block_meta_t *)(size_t)syscall1(SYSBRK, 0);
+    request_size = (size_t)size + (size_t)META_SIZE + (size_t)block;
+    request = (void *)(size_t)syscall1(SYSBRK, request_size);
     if (request == (void *)-1)
     {
         return NULL;

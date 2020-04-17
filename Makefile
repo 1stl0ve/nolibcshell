@@ -1,5 +1,7 @@
 CFLAGS ?= -g -Wall -nostdlib -nodefaultlibs -nostartfiles
+CFLAGS32 ?= -g -Wall -nostdlib -nodefaultlibs -nostartfiles -m32 -fno-pie
 ENTRY ?= entry.S
+ENTRY32 ?= entry_x86.S
 OBJS = shell.o strings.o heap.o mylib.o
 
 shell: $(OBJS)
@@ -10,6 +12,9 @@ shell: $(OBJS)
 	gcc $(CFLAGS) -c $< -o $@
 
 .PHONY: clean clean-objs
+
+shell32:
+	$(MAKE) ENTRY="$(ENTRY32)" CFLAGS="$(CFLAGS32) -DARCH32" shell
 
 unity: unity.c
 	gcc $(CFLAGS) unity.c entry.S -o shell.unity
