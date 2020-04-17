@@ -9,7 +9,7 @@ There are three options for building this project:
 
 1. An x86_64 binary using the `make shell` command.
 2. An x86 binary using the `make shell32` command.
-3. An x86_64 binary made with a unity build using the `make unity` command.
+3. An x86_64 binary made with a unity build (why not?) using the `make unity` command.
 
 ## Design
 
@@ -31,4 +31,4 @@ provide `argc`, `argv` and `envp` to `main()`.
 
 ## Credit
 
-An excelent heap implementation tutorial: https://danlulu.com/malloc-tutorial.
+An excellent heap implementation tutorial: https://danlulu.com/malloc-tutorial.
