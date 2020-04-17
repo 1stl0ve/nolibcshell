@@ -223,12 +223,6 @@ int main(int argc, char *argv[], char *envp[])
     for (;;)
     {
         /**
-         * reset some variables for each iteration.
-         */
-        background = 0;
-        memset(buff, 0, MAX_BUFF_LEN);
-
-        /**
          * get the user's input and parse the arguments.
          */
         printstr(STDERR, prompt);
@@ -291,17 +285,16 @@ int main(int argc, char *argv[], char *envp[])
             if (-1 == execve(argv2[0], (const char *const *)argv2, (const char *const *) envp))
             {
                 printstr(STDERR, "error: execve\n");
-                if (filename)
-                {
-                    free(filename);
-                    filename = NULL;
-                }
+                free(filename);
+                filename = NULL;
                 exit(1);
             }
             /**
-             * execve should not return on success.
+             * execve succeeds, but the command is invalid and returns here.
              */
-            __builtin_unreachable();
+            free(filename);
+            filename = NULL;
+            exit(1);
         }
         else
         {
@@ -310,7 +303,7 @@ int main(int argc, char *argv[], char *envp[])
              */
             if (background)
             {
-                continue;
+                goto reset;
             }
             if (-1 == waitpid(child, &status, __WALL))
             {
@@ -319,11 +312,14 @@ int main(int argc, char *argv[], char *envp[])
             }
         }
 
-        if (filename)
-        {
-            free(filename);
-            filename = NULL;
-        }
+reset:
+        /**
+         * reset some variables for each iteration.
+         */
+        background = 0;
+        memset(buff, 0, MAX_BUFF_LEN);
+        free(filename);
+        filename = NULL;
     }
     return 0;
 }
