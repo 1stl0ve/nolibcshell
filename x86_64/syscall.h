@@ -12,16 +12,16 @@
 #define SYSEXIT 60
 #define SYSWAIT4 61
 
-#define syscall0(NUMBER)     \
-    ({                       \
-        int retval;          \
-        asm volatile(        \
+#define syscall0(NUMBER)      \
+    ({                        \
+        long retval;          \
+        asm volatile(         \
             "movq %1, %%rax;" \
-            "syscall"        \
-            : "=a"(retval)   \
-            : "i"(NUMBER)    \
-            : "memory");     \
-        retval;              \
+            "syscall"         \
+            : "=a"(retval)    \
+            : "i"(NUMBER)     \
+            : "memory");      \
+        retval;               \
     })
 
 #define syscall1(NUMBER, ARG0) \
@@ -40,11 +40,11 @@
 
 #define syscall2(NUMBER, ARG0, ARG1) \
     ({                               \
-        long retval;                  \
+        long retval;                 \
         asm volatile(                \
-            "movq %1, %%rax;"         \
-            "movq %2, %%rdi;"         \
-            "movq %3, %%rsi;"         \
+            "movq %1, %%rax;"        \
+            "movq %2, %%rdi;"        \
+            "movq %3, %%rsi;"        \
             "syscall"                \
             : "=a"(retval)           \
             : "i"(NUMBER),           \
