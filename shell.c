@@ -2,7 +2,6 @@
 #include "heap.h"
 #include "strings.h"
 
-#define TRUE 1
 #define MAX_BUFF_LEN 2048
 #define STDIN 0
 #define STDOUT 1
@@ -10,32 +9,68 @@
 
 int main(int argc, char *argv[], char *envp[]);
 
-int read_line(char *buff, unsigned length)
+/**
+ * read_line:
+ * @brief reads a line of input from stdin.
+ * 
+ * This function reads from std in until either a new line character is encountered or
+ * a length limit has been reached.
+ * 
+ * @param buff - the buffer to write the input to.
+ * @param length - the maximum number of bytes to read.
+ * @return the total number of bytes read.
+ */
+int read_line(char *buff, unsigned int length)
 {
-    int i = 0;
+    unsigned int i = 0;
     char c = '\0';
+
+    assert(NULL != buff);
+
     do
     {
-        read(0, &c, 1);
+        read(STDIN, &c, 1);
         buff[i++] = c;
     } while (c != '\n' && i < length);
 
     return i;
 }
 
+/**
+ * parse_args:
+ * @brief parses a string of arguments separated by a space and write them into an array.
+ * 
+ * @param argv - the array of strings to write each argument to.
+ * @param args - a string of all arguments separated by spaces.
+ * @return the number of arguments.
+ */
 int parse_args(char *argv[], char *args)
 {
     int i = 0;
 
+    assert(NULL != argv);
+    assert(NULL != args);
+
+    /**
+     * only accept arguments that are terminated with a new line (i.e. a user pressed
+     * the enter key after typing a command).
+     */
     if (args[strlen(args) - 1] != '\n')
     {
         return -1;
     }
 
+    /**
+     * we do not want the new line character in our output though...
+     */
     args[strlen(args) - 1] = '\0';
 
+    /**
+     * parse the arguments using the home-brewed strtok.
+     * 
+     * NOTE: this strtok returns a pointer to after the _next_ instance of a delimeter.
+     */
     argv[0] = args;
-
     for (i = 0; i + 1 < 1024 && argv[i]; i++)
     {
         argv[i + 1] = strtok(argv[i], ' ');
@@ -44,7 +79,19 @@ int parse_args(char *argv[], char *args)
     return i;
 }
 
-/* https://stackoverflow.com/questions/147057/ */
+/**
+ * search_path:
+ * @brief search the PATH env variable to resolve a command.
+ * 
+ * This function iterates through each path in the PATH env variable and checks to see if
+ * path/cmd is a valid executable.
+ * 
+ * Base on the example from: https://stackoverflow.com/questions/147057/ 
+ * 
+ * @param cmd - the command to execute.
+ * @param env_path - the PATH env variable
+ * @return a pointer to a valid path; NULL on error.
+ */
 char *search_path(char *cmd, char *env_path)
 {
     char *paths[MAX_BUFF_LEN];
@@ -53,7 +100,10 @@ char *search_path(char *cmd, char *env_path)
     int i = 0;
     int status = 0;
 
-    /*
+    assert(NULL != cmd);
+    assert(NULL != env_path);
+
+    /**
      * Create an array containing each of the potential path elements by tokenizing
      * env_path on ':'
      */
@@ -67,34 +117,37 @@ char *search_path(char *cmd, char *env_path)
     {
         path_len = strlen(paths[i]) + 1 + strlen(cmd) + 1; /* +2 for '/' and null byte. */
         path = malloc(path_len * sizeof(char));
-        if (!path)
+        if (NULL == path)
         {
-            return NULL;
+            goto done;
         }
         memset(path, 0, path_len);
 
-        /* 
+        /** 
          * construct the binary path: path + / + cmd 
          */
         strncpy(path, paths[i], strlen(paths[i]));
         strncpy(path + strlen(paths[i]), "/", 1);
         strncpy(path + strlen(paths[i]) + 1, cmd, strlen(cmd));
 
-        /*
+        /**
          * check to see if that binary exists and is executable.
          */
         status = access(path, X_OK);
         if (0 == status)
         {
-            return path;
+            goto done;
         }
 
         /* 
          * no good. 
          */
         free(path);
+        path = NULL;
     }
-    return NULL;
+
+done:
+    return path;
 }
 
 char *get_command_path(char *cmd, char *envp[])
@@ -102,6 +155,9 @@ char *get_command_path(char *cmd, char *envp[])
     char path_str[MAX_BUFF_LEN] = {0};
     char *path = NULL;
     int i = 0;
+
+    assert(NULL != cmd);
+    assert(NULL != envp);
 
     /*
      * if the command starts with a '/', assume its an absolute path.
@@ -135,71 +191,123 @@ char *get_command_path(char *cmd, char *envp[])
     return search_path(cmd, path_str);
 }
 
+/**
+ * main:
+ * @brief runs main shell loop.
+ * 
+ * @param argc - number of arguments
+ * @param argv - array of arguments
+ * @param envp - array of env variables
+ * @return 0 on success; other value on error;
+ */
 int main(int argc, char *argv[], char *envp[])
 {
     char buff[MAX_BUFF_LEN] = {0};
     char *argv2[1024] = {0};
     char *prompt = "$ ";
+    char *filename = NULL;
     int status = 0;
     int n = 0;
     int background = 0;
+    int child = 0;
 
-    while (TRUE)
+    /**
+     * ignore unused arguments.
+     */
+    (void) argc;
+    (void) argv;
+
+    /**
+     * loop through commands.
+     */
+    for (;;)
     {
+        /**
+         * reset some variables for each iteration.
+         */
         background = 0;
         memset(buff, 0, MAX_BUFF_LEN);
+
+        /**
+         * get the user's input and parse the arguments.
+         */
         printstr(STDERR, prompt);
         read_line(buff, MAX_BUFF_LEN);
-        printstr(STDIN, "[DEBUG] executing: ");
-        printstr(STDIN, buff);
-
         n = parse_args(argv2, buff);
 
+        /**
+         * if there isn't any command, loop back around to get another one.
+         */
         if (0 == strncmp(argv2[0], "", 1))
         {
             continue;
         }
 
+        /**
+         * if the command is exit, the loop is done.
+         */
         if (0 == strncmp(argv2[0], "exit", 4))
         {
             break;
         }
 
+        /**
+         * if the last argument is '&' then the user wants to background the command.
+         * set the 'background' variable to 1 to indicate this and remove the '&' from
+         * the argument array (otherwise execve seems to try to interpret it...)
+         */
         if (0 == strncmp("&", argv2[n -1], 1))
         {
             background = 1;
             argv2[n -1] = NULL;
         }
 
-        char *filename = get_command_path(argv2[0], envp);
+        /**
+         * get the path to the binary that the user wants to execute by checking the 
+         * PATH env variable. If get_command_path returns NULL, then use the exact
+         * value input by the user.
+         */
+        filename = get_command_path(argv2[0], envp);
         if (filename)
         {
             argv2[0] = filename;
         }
-        int child = fork();
 
+        /**
+         * fork a new process to execute the command.
+         */
+        child = fork();
         if (-1 == child)
         {
-            exit(1);
+            exit(1); /* exit on error. */
         }
+
+        /**
+         * if this is the child process, call execve using argv2 and envp.
+         * if execve fails, exit.
+         */
         else if (0 == child)
         {
-            if (-1 == execve(argv2[0], (const char *const *)argv2, envp))
+            if (-1 == execve(argv2[0], (const char *const *)argv2, (const char *const *) envp))
             {
-                printstr(STDERR, "execve failed\n");
+                printstr(STDERR, "error: execve\n");
+                if (filename)
+                {
+                    free(filename);
+                    filename = NULL;
+                }
+                exit(1);
             }
-            if (filename)
-            {
-                free(filename);
-            }
-            exit(0);
+            /**
+             * execve should not return on success.
+             */
+            __builtin_unreachable();
         }
         else
         {
-            printstr(STDOUT, "checking: ");
-            printstr(STDOUT, argv2[n-1]);
-            printstr(STDOUT, "\n");
-            //if (0 == strncmp("&", argv2[n - 1], 1))
+            /**
+             * wait for the child process unless the user wants to background it.
+             */
             if (background)
             {
                 continue;
@@ -209,17 +317,13 @@ int main(int argc, char *argv[], char *envp[])
                 printstr(STDERR, "error: waitpid\n");
                 exit(1);
             }
-            else if ((status) & 0x7f)
-            {
-                printstr(STDERR, "child exited\n");
-            }
         }
 
         if (filename)
         {
             free(filename);
+            filename = NULL;
         }
-        memset(buff, 0, MAX_BUFF_LEN);
     }
     return 0;
 }
