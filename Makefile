@@ -1,5 +1,5 @@
 ARCH ?= x86_64
-CFLAGS = -g -Wall -nostdlib -nodefaultlibs -nostartfiles
+CFLAGS = -g -Wall -Wextra -Werror -nostdlib -nodefaultlibs -nostartfiles
 CFLAGS_32 = -m32 -fno-pie
 ENTRY = $(ARCH)/entry.S
 OBJS = shell.o strings.o heap.o mylib.o
